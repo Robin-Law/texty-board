@@ -1,0 +1,20 @@
+{
+  "name": "texty-board",
+  "version": "0.1.0",
+  "description": "A little ASCII dashboard for monitoring stuff",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Robin Law",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.8.5",
+    "dotenv": "^5.0.1",
+    "figlet": "^1.2.0",
+    "moment": "^2.22.2"
+  }
+}
