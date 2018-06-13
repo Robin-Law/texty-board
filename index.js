@@ -8,11 +8,13 @@ const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
 const figletStyleColossal = {
-  font: 'colossal'
+  font: 'Colossal'
 };
 
-const westBanner = figlet.textSync('HBase West', figletStyleColossal);
-const eastBanner = figlet.textSync('HBase East', figletStyleColossal);
+const westName = process.env.ENV_ONE_NAME;
+const eastName = process.env.ENV_TWO_NAME;
+const westBanner = figlet.textSync(westName, figletStyleColossal);
+const eastBanner = figlet.textSync(eastName, figletStyleColossal);
 const isUp = figlet.textSync('is up!', figletStyleColossal);
 const isDown = figlet.textSync('is down!', figletStyleColossal);
 const getLastUnhealthyBanner = (lastHealthy) => {
@@ -49,13 +51,13 @@ const getBaseBox = (content) => ({
 });
 const environments = [
   {
-    name: 'HBase West',
+    name: westName,
     banner: westBanner,
     url: westUrl,
     view: blessed.text(getBaseBox(`${westBanner}`))
   },
   {
-    name: 'HBase East',
+    name: eastName,
     banner: eastBanner,
     url: eastUrl,
     view: blessed.text(getBaseBox(`${eastBanner}`))
