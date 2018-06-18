@@ -8,7 +8,7 @@ const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
 const figletStyleColossal = {
-  font: 'Colossal'
+  font: 'banner'
 };
 
 const westName = process.env.ENV_ONE_NAME;
@@ -22,6 +22,10 @@ const getLastUnhealthyBanner = (lastHealthy) => {
 };
 const westUrl = process.env.ENV_ONE_STATUS_URL;
 const eastUrl = process.env.ENV_TWO_STATUS_URL;
+
+const trimetAppId = process.env.TRIMET_APP_ID;
+const trimetStopIds = process.env.TRIMET_STOP_IDS;
+const trimetUrl = `https://developer.trimet.org/ws/v2/arrivals?locIDs=${trimetStopIds}&appID=${trimetAppId}`
 
 // Create a screen object.
 const screen = blessed.screen({
@@ -73,9 +77,20 @@ const outageBox = blessed.text({
     type: 'line'
   },
 });
+const arrivalsBox = blessed.text({
+  parent: layout,
+  width: '50%',
+  height: '50%',
+  label: "Arrivals",
+  content: "",
+  border: {
+    type: 'line'
+  },
+});
 const state = { environments: environments, outages: [] };
 state.environments.slice(0, 2).forEach(env => layout.append(env.view));
 layout.append(outageBox);
+layout.append(arrivalsBox);
 screen.render();
 
 const updateEnvironmentStatuses = () =>
@@ -125,11 +140,34 @@ const updateOutageView = () => {
   screen.render();
 }
 
+const updateArrivals = () => {
+  arrivalsBox.setContent('Loading...');
+  screen.render();
+  axios.get(trimetUrl)
+    .then(response => {
+      const now = Date.now();
+      const arrivals = response.data.resultSet.arrival.map(arrival => {
+        const time = ((arrival[arrival.status] - now) / (1000 * 60)).toFixed();
+        const s = time == 1 ? '' : 's';
+        return `${arrival.shortSign}: ${time} minute${s}`;
+      });
+      arrivalsBox.setContent(arrivals.join('\n'));
+      screen.render();
+    })
+    .catch(error => {
+      arrivalsBox.setContent('Error retrieving Trimet data!');
+      screen.render();
+    });
+};
+
 updateEnvironmentStatuses();
+updateArrivals();
 setInterval(updateEnvironmentStatuses, 300000);
+setInterval(updateArrivals, 60000);
 
 screen.key(['enter'], function(ch, key) {
   updateEnvironmentStatuses();
+  updateArrivals();
 });
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
