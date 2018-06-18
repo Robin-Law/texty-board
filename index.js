@@ -8,7 +8,7 @@ const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
 const figletStyleColossal = {
-  font: 'banner'
+  font: 'Colossal'
 };
 
 const westName = process.env.ENV_ONE_NAME;
