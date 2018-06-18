@@ -2,8 +2,9 @@ require('dotenv').config();
 const blessed = require('blessed');
 const figlet = require('figlet');
 const moment = require('moment');
-const axios = require('axios');
-
+const axios = require('axios').create({
+  timeout: 10000,
+});
 const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
