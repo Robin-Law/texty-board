@@ -18,7 +18,7 @@ const eastName = process.env.ENV_TWO_NAME;
 const westBanner = figlet.textSync(westName, figletStyleColossal);
 const eastBanner = figlet.textSync(eastName, figletStyleColossal);
 const getLastUnhealthyBanner = (lastHealthy) => {
-  return figlet.textSync(`${lastHealthy.format('LT')}`, figletStyleColossal);
+  return figlet.textSync(`${lastHealthy.fromNow()}`);
 };
 const westUrl = process.env.ENV_ONE_STATUS_URL;
 const eastUrl = process.env.ENV_TWO_STATUS_URL;
@@ -84,7 +84,7 @@ const resolveOutage = (envName) => {
 }
 
 const updateOutageView = () => {
-  state.outageBox.setContent([...state.outages].reverse().map(outage => `${outage.env} - ${outage.start.format("LLL")} - ${outage.end ? outage.end.format("LLL") : "Ongoing"}`).join("\n"));
+  state.outageBox.setContent([...state.outages].reverse().map(outage => `${outage.env} - ${outage.start.format("lll")} - ${outage.end ? outage.end.format("lll") : "Ongoing"}`).join("\n"));
   state.screen.render();
 }
 
