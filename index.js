@@ -3,7 +3,6 @@ const blessed = require('blessed');
 const axios = require('axios').create({
   timeout: 10000,
 });
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 
 const trimetAppId = process.env.TRIMET_APP_ID;
