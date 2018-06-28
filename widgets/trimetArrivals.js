@@ -12,6 +12,7 @@ const arrivalsBox = blessed.text({
   height: '50%',
   label: "Arrivals",
   content: "",
+  tags: true,
   border: {
     type: 'line'
   },
@@ -23,12 +24,27 @@ const updateArrivals = () => {
   axios.get(trimetUrl)
     .then(response => {
       const now = Date.now();
-      const arrivals = response.data.resultSet.arrival.map(arrival => {
-        const time = ((arrival[arrival.status] - now) / (1000 * 60)).toFixed();
-        const s = time == 1 ? '' : 's';
-        return `${arrival.shortSign}: ${time} minute${s}`;
+      const locations = response.data.resultSet.location.map(location => {
+        const description = `{bold}${location.desc}{/} - ${location.dir}`;
+        const arrivals = response.data.resultSet.arrival
+          .filter(arrival => arrival.locid === location.id)
+          .map(arrival => {
+            const time = Math.abs(((arrival[arrival.status] - now) / (1000 * 60))).toFixed();
+            const s = time == 1 ? '' : 's';
+            let description = arrival.shortSign;
+            const isMax = arrival.fullSign.match(/^MAX\s+(\S+)\s+Line/);
+            if (isMax) {
+              let colour = isMax[1].toLowerCase();
+              if (colour == 'orange') colour = '#ffa500';
+              description = `{${colour}-fg}${description}{/${colour}-fg}`;
+            }
+            description = `${description}: ${time} minute${s}`;
+            if (arrival.status === 'scheduled') description += ' (scheduled)';
+            return description;
+          });
+        return [description, ...arrivals].join('\n')
       });
-      arrivalsBox.setContent(arrivals.join('\n'));
+      arrivalsBox.setContent(locations.join('\n\n'));
       state.screen.render();
     })
     .catch(error => {
