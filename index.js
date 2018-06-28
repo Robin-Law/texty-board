@@ -6,7 +6,8 @@ const axios = require('axios').create({
 
 // Create a screen object.
 const screen = blessed.screen({
-  smartCSR: true
+  smartCSR: true,
+  terminal: 'xterm-256color',
 });
 screen.title = 'Toasty Dash';
 const layout = blessed.layout({
