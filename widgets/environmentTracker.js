@@ -1,35 +1,30 @@
 const blessed = require('blessed');
 const figlet = require('figlet');
 const moment = require('moment');
-const axios = require('axios').create({
-  timeout: 10000,
-});
+const uuid = require("uuid").v4;
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
-const figletStyleColossal = {
+const figletStyleBanner = {
   font: 'Colossal'
 };
-
-const westName = process.env.ENV_ONE_NAME;
-const eastName = process.env.ENV_TWO_NAME;
-const westBanner = figlet.textSync(westName, figletStyleColossal);
-const eastBanner = figlet.textSync(eastName, figletStyleColossal);
-const getLastUnhealthyBanner = (lastHealthy) => {
-  return figlet.textSync(`${lastHealthy.fromNow()}`);
+const figletStyleLastHealthy = {
+  font: 'Short'
 };
-const westUrl = process.env.ENV_ONE_STATUS_URL;
-const eastUrl = process.env.ENV_TWO_STATUS_URL;
 
-const getBaseBox = (content) => ({
-  width: '50%',
-  height: '50%',
-  align: 'center',
-  content: content,
-  label: moment().toLocaleString(),
-  tags: true,
+const getTimeSinceHealthyBanner = (outageStartMoment) => figlet.textSync(`${outageStartMoment.fromNow()}`, figletStyleLastHealthy);
+
+const calculateDimensions = (viewWidthPercent, viewHeightPercent, widgetWidthWeight) => {
+  if (isNaN(viewWidthPercent) || isNaN(viewHeightPercent)) throw "view size percents must be a number!";
+  return { width: `${viewWidthPercent * widgetWidthWeight}%`, height: `${viewHeightPercent}%`};
+};
+
+const createCurrentStatusView = (dimensionsObject, name) => blessed.text({
+  width: dimensionsObject.width,
+  height: dimensionsObject.height,
+  content: figlet.textSync(name, figletStyleBanner),
+  label: "Loading...",
   style: {
     fg: 'white',
     bg: maybeColor
@@ -39,88 +34,101 @@ const getBaseBox = (content) => ({
   },
 });
 
-const state = { outages: [] };
+const createOutagesView = (dimensionsObject, name) => blessed.text({
+  width: dimensionsObject.width,
+  height: dimensionsObject.height,
+  label: `${name} outages`,
+  content: "",
+  border: {
+    type: 'line'
+  },
+});
 
-const updateEnvironmentStatuses = () =>
-  state.environments.forEach(env => {
-    axios.get(env.url)
-      .then(response => {
-        if (env.healthy === false) {
-          // TODO: State is getting messy! Clean it up!
-          resolveOutage(env.name);
-        }
-        env.healthy = true;
-        env.view.setContent(`${env.banner}`);
-        env.view.style = { ...env.view.style, bg: goodColor };
-        env.view.setLabel(`Last Checked: ${moment().toLocaleString()} - Result: ${response.status}`);
-        state.screen.render();
-      })
-      .catch(error => {
-        if (env.healthy || env.healthy === undefined) {
-          // TODO: State is getting messy! Clean it up!
-          env.lastUnhealthy = moment();
-          addOutage(env.name);
-        }
-        env.healthy = false;
-        const lastUnhealthyDisplay = getLastUnhealthyBanner(env.lastUnhealthy);
-        env.view.setContent(`${env.banner}\n\n${lastUnhealthyDisplay}`);
-        env.view.style = { ...env.view.style, bg: badColor };
-        env.view.setLabel(`Last Checked: ${moment().toLocaleString()} - Result: ${error}`);
-        state.screen.render();
-      });
+const createOutage = (instance, reason) => {
+  const outageId = uuid();
+  instance.currentOutageId = outageId;
+  instance.outages.push({
+    id: outageId,
+    outageBegan: moment(),
+    reason
   });
+};
 
-const addOutage = (envName) => {
-  // TODO: State is getting messy! Clean it up!
-  state.outages.push({ env: envName, start: moment() });
-  updateOutageView();
+const getCurrentOutage = (instance) => instance.outages.find(outage => outage.id === instance.currentOutageId);
+
+const markOutageResolved = (instance) => {
+  getCurrentOutage(instance).outageEnded = moment();
+  delete instance.currentOutageId;
 }
 
-const resolveOutage = (envName) => {
-  // TODO: State is getting messy! Clean it up!
-  var outagesForEnv = (state.outages || [{}]).filter(outage => outage.env === envName);
-  (outagesForEnv[state.outages.length-1] || {}).end = moment();
-  updateOutageView();
-}
-
-const updateOutageView = () => {
-  state.outageBox.setContent([...state.outages].reverse().map(outage => `${outage.env} - ${outage.start.format("lll")} - ${outage.end ? outage.end.format("lll") : "Ongoing"}`).join("\n"));
-  state.screen.render();
-}
-
-const environmentTrackerFactory = (screen) => {
-  state.screen = screen;
-  state.environments = [
-    {
-      name: westName,
-      banner: westBanner,
-      url: westUrl,
-      view: blessed.text(getBaseBox(`${westBanner}`))
-    },
-    {
-      name: eastName,
-      banner: eastBanner,
-      url: eastUrl,
-      view: blessed.text(getBaseBox(`${eastBanner}`))
+const updateActionFactory = (instance, url) => async () => {
+  try {
+    var response = await instance.axios.get(url);
+    if (instance.currentOutageId) {
+      markOutageResolved(instance);
     }
-  ]
-
-  state.outageBox = blessed.text({
-    width: '25%',
-    height: '50%',
-    label: "Outages",
-    content: "",
-    border: {
-      type: 'line'
-    },
-  });
-
-  const views = [...state.environments.map(environment => environment.view), state.outageBox];
-
-  return {
-    views: views,
-    updateAction: updateEnvironmentStatuses
+    // console.log(JSON.stringify({ currentOutageId: instance.currentOutageId, outages: instance.outages.map(outage => outage.id)}));
+    updateCurrentStatusView(instance, response.status);
+    updateOutageView(instance);
+  }
+  catch(error) {
+    const currentOutage = getCurrentOutage(instance);
+    if (!currentOutage) {
+      createOutage(instance, error);
+    }
+    else if (currentOutage && currentOutage.error !== currentOutage.reason) {
+      markOutageResolved(instance);
+      createOutage(instance, error);
+    }
+    // console.log(JSON.stringify({ currentOutageId: instance.currentOutageId, outages: instance.outages.map(outage => outage.id)}));
+    updateCurrentStatusView(instance, error);
+    updateOutageView(instance);
   }
 }
+
+const updateCurrentStatusView = (instance, status) => {
+  const view = instance.currentStatusView;
+  if (instance.currentOutageId) {
+    view.style = { ...view.style, bg: badColor };
+    view.setContent(`${instance.banner}\n\n${getTimeSinceHealthyBanner(getCurrentOutage(instance).outageBegan)}`);
+    view.setLabel(`Last Checked: ${moment().format("lll")} - Result: ${status}`);
+  }
+  else {
+    view.style = { ...view.style, bg: goodColor };
+    view.setContent(`${instance.banner}`);
+    view.setLabel(`Last Checked: ${moment().format("lll")} - Result: ${status}`);
+  }
+  instance.screen.render();
+}
+
+const updateOutageView = (instance) => {
+  const view = instance.outagesView;
+  view.setContent(
+      [...instance.outages].reverse().map(outage =>
+        `From: ${outage.outageBegan.format("lll")}\n To:   ${outage.outageEnded ? outage.outageEnded.format("lll") : "Ongoing"}\n${outage.reason}`)
+      .join("\n")
+    );
+  instance.screen.render();
+}
+
+const environmentTrackerFactory = (axios, screen, name, url, viewWidthPercent, viewHeightPercent) => {
+  const currentStatusViewWeight = .67;
+  const currentStatusViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, currentStatusViewWeight);
+  const outagesViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, 1 - currentStatusViewWeight);
+  const instance = {
+    axios: axios,
+    screen,
+    name,
+    url,
+    outages: [],
+    banner: figlet.textSync(name, figletStyleBanner),
+    currentStatusView: createCurrentStatusView(currentStatusViewDimensions, name),
+    outagesView: createOutagesView(outagesViewDimensions, name)
+  };
+
+  const views = [ instance.currentStatusView, instance.outagesView ];
+
+  return { views, updateAction: updateActionFactory(instance, url) };
+};
 
 module.exports = environmentTrackerFactory;
