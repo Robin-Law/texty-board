@@ -67,21 +67,19 @@ const updateActionFactory = (instance, url) => async () => {
     if (instance.currentOutageId) {
       markOutageResolved(instance);
     }
-    // console.log(JSON.stringify({ currentOutageId: instance.currentOutageId, outages: instance.outages.map(outage => outage.id)}));
     updateCurrentStatusView(instance, response.status);
     updateOutageView(instance);
   }
   catch(error) {
     const currentOutage = getCurrentOutage(instance);
-    if (!currentOutage) {
-      createOutage(instance, error);
-    }
-    else if (currentOutage && error !== currentOutage.reason) {
+    if (currentOutage && error.message !== currentOutage.reason) {
       markOutageResolved(instance);
-      createOutage(instance, error);
+      createOutage(instance, error.message);
     }
-    // console.log(JSON.stringify({ currentOutageId: instance.currentOutageId, outages: instance.outages.map(outage => outage.id)}));
-    updateCurrentStatusView(instance, error);
+    else if (!currentOutage) {
+      createOutage(instance, error.message);
+    }
+    updateCurrentStatusView(instance, error.message);
     updateOutageView(instance);
   }
 }
