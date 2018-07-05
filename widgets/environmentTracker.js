@@ -76,7 +76,7 @@ const updateActionFactory = (instance, url) => async () => {
     if (!currentOutage) {
       createOutage(instance, error);
     }
-    else if (currentOutage && currentOutage.error !== currentOutage.reason) {
+    else if (currentOutage && error !== currentOutage.reason) {
       markOutageResolved(instance);
       createOutage(instance, error);
     }
