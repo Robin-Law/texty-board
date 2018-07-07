@@ -11,8 +11,7 @@ const renderTime = timeText => figlet.textSync(moment().format('LT'));
 const state = {};
 
 const clockBox = blessed.text({
-  width: '25%',
-  content: "",
+  width: '90%',
   label: "Now",
   content: renderTime(),
   border: {
