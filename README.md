@@ -17,7 +17,6 @@
 
 ## Features TODO
 
-* Weather Display
 * Persistence
 * Less rigid/more configurable structure
 * Serve views over Telnet
