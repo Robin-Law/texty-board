@@ -3,6 +3,38 @@ const figlet = require('figlet');
 const moment = require('moment');
 const uuid = require("uuid").v4;
 
+const sqliteDateTimeFormat = 'yyyy-MM-dd HH:mm:ss';
+const createTable = (db) => db.run(
+  `CREATE TABLE IF NOT EXISTS Outages 
+  (
+    id VARCHAR(36) PRIMARY KEY,
+    environment VARCHAR(50),
+    outageBegan DATETIME,
+    outageEnded DATETIME,
+    reason VARCHAR(255)
+  )`
+);
+
+const persistOutage = (db, outage) => {
+  db.run(
+    `INSERT INTO Outages (id, environment, outageBegan, reason)
+     VALUES (
+       '${outage.id}',
+       '${outage.environment}',
+       '${outage.format(sqliteDateTimeFormat)}',
+       '${outage.reason}'
+      )`
+  );
+};
+
+const persistResolveOutage = (db, outage) => {
+  db.run(
+    `UPDATE Outages
+     SET outageEnded='${outage.outageEnded.format(sqliteDateTimeFormat)}'
+     WHERE id='${outage.id}'`
+  );
+}
+
 const goodColor = 'green';
 const maybeColor = 'grey';
 const badColor = 'red';
@@ -45,19 +77,21 @@ const createOutagesView = (dimensionsObject, name) => blessed.text({
 });
 
 const createOutage = (instance, reason) => {
-  const outageId = uuid();
-  instance.currentOutageId = outageId;
-  instance.outages.push({
-    id: outageId,
+  const newOutage = {
+    id: uuid(),
     outageBegan: moment(),
     reason
-  });
+  }
+  instance.currentOutageId = newOutage.id;
+  instance.outages.push(newOutage);
 };
 
 const getCurrentOutage = (instance) => instance.outages.find(outage => outage.id === instance.currentOutageId);
 
 const markOutageResolved = (instance) => {
-  getCurrentOutage(instance).outageEnded = moment();
+  const currentOutage = getCurrentOutage(instance)
+  currentOutage.outageEnded = moment();
+  persistResolveOutage(instance.db, currentOutage);
   delete instance.currentOutageId;
 }
 
@@ -109,13 +143,15 @@ const updateOutageView = (instance) => {
   instance.screen.render();
 }
 
-const environmentTrackerFactory = (axios, screen, name, url, viewWidthPercent, viewHeightPercent) => {
+const environmentTrackerFactory = (axios, screen, db, name, url, viewWidthPercent, viewHeightPercent) => {
+  createTable(db);
   const currentStatusViewWeight = .67;
   const currentStatusViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, currentStatusViewWeight);
   const outagesViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, 1 - currentStatusViewWeight);
   const instance = {
     axios: axios,
     screen,
+    db,
     name,
     url,
     outages: [],
