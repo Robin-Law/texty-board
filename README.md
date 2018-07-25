@@ -12,6 +12,9 @@
   ENV_TWO_NAME=EFF
   TRIMET_APP_ID=(Trimet API Key)
   TRIMET_STOP_IDS=8382,7646,10768
+  OWM_API_KEY=(OpenWeatherMap API key)
+  OWM_LOCATION=Portland
+  OWM_UNITS=imperial
   ```
 4. `npm start`
 
