@@ -18,8 +18,8 @@
   ```
 4. `npm start`
 
-## Windows Users
-You will need to run this in a WSL (Windows Subsystem For Linux) shell or similar, since blessed does not work well in Windows-based shells.
+## Windows Support
+You will need to run this in a WSL (Windows Subsystem For Linux) shell or similar, since [blessed](https://github.com/chjj/blessed) does not work well in Windows-based shells.
 
 ## Features TODO
 
