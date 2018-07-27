@@ -19,11 +19,11 @@ const layout = blessed.layout({
 });
 
 const environmentTrackerWest =
-  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_ONE_NAME, process.env.ENV_ONE_STATUS_URL, 50, 50);
+  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_ONE_NAME, process.env.ENV_ONE_STATUS_URL, '50%', '50%');
 const environmentTrackerEast =
-  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_TWO_NAME, process.env.ENV_TWO_STATUS_URL, 50, 50);
-environmentTrackerWest.views.forEach(view => layout.append(view));
-environmentTrackerEast.views.forEach(view => layout.append(view));
+  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_TWO_NAME, process.env.ENV_TWO_STATUS_URL, '50%', '50%');
+layout.append(environmentTrackerWest.view);
+layout.append(environmentTrackerEast.view);
 
 const trimetArrivals = require("./widgets/trimetArrivals")(screen);
 layout.append(trimetArrivals.view);

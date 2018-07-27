@@ -16,14 +16,14 @@ const figletStyleLastHealthy = {
 
 const getTimeSinceHealthyBanner = (outageStartMoment) => figlet.textSync(`${outageStartMoment.fromNow()}`, figletStyleLastHealthy);
 
-const calculateDimensions = (viewWidthPercent, viewHeightPercent, widgetWidthWeight) => {
-  if (isNaN(viewWidthPercent) || isNaN(viewHeightPercent)) throw "view size percents must be a number!";
-  return { width: `${viewWidthPercent * widgetWidthWeight}%`, height: `${viewHeightPercent}%`};
-};
+const createEnvironmentTrackerView = (width, height, name) => blessed.layout({
+  width: width,
+  height: height,
+});
 
-const createCurrentStatusView = (dimensionsObject, name) => blessed.text({
-  width: dimensionsObject.width,
-  height: dimensionsObject.height,
+const createCurrentStatusView = (layout, name) => blessed.text({
+  width: '60%',
+  height: '100%',
   content: figlet.textSync(name, figletStyleBanner),
   label: "Loading...",
   style: {
@@ -35,9 +35,9 @@ const createCurrentStatusView = (dimensionsObject, name) => blessed.text({
   },
 });
 
-const createOutagesView = (dimensionsObject, name) => blessed.text({
-  width: dimensionsObject.width,
-  height: dimensionsObject.height,
+const createOutagesView = (layout, name) => blessed.text({
+  width: '40%',
+  height: '100%',
   label: `${name} outages`,
   content: "",
   border: {
@@ -168,9 +168,11 @@ const registerEndpoints = (expressInstance, instance) => {
 const environmentTrackerFactory = (axios, screen, db, expressInstance, name, url, viewWidthPercent, viewHeightPercent) => {
   const sqlAdapter = adapterFactory(db);
   sqlAdapter.createTable();
-  const currentStatusViewWeight = .67;
-  const currentStatusViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, currentStatusViewWeight);
-  const outagesViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, 1 - currentStatusViewWeight);
+  const view = createEnvironmentTrackerView(viewWidthPercent, viewHeightPercent, name);
+  const currentStatusView = createCurrentStatusView(view, name);
+  const outagesView = createOutagesView(view, name);
+  view.append(currentStatusView);
+  view.append(outagesView);
   const instance = {
     axios: axios,
     screen,
@@ -179,8 +181,9 @@ const environmentTrackerFactory = (axios, screen, db, expressInstance, name, url
     url,
     outages: [],
     banner: figlet.textSync(name, figletStyleBanner),
-    currentStatusView: createCurrentStatusView(currentStatusViewDimensions, name),
-    outagesView: createOutagesView(outagesViewDimensions, name),
+    view: view,
+    currentStatusView: currentStatusView,
+    outagesView: outagesView,
     sqlAdapter: sqlAdapter
   };
 
@@ -189,9 +192,7 @@ const environmentTrackerFactory = (axios, screen, db, expressInstance, name, url
 
   registerEndpoints(expressInstance, instance);
 
-  const views = [ instance.currentStatusView, instance.outagesView ];
-
-  return { views, updateAction: updateActionFactory(instance, url) };
+  return { view, updateAction: updateActionFactory(instance, url) };
 };
 
 module.exports = environmentTrackerFactory;
