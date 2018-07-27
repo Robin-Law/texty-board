@@ -134,12 +134,18 @@ const registerEndpoints = (expressInstance, instance) => {
     res.type('text/html').send(
       `<html><body>
       <style type="text/css">
+        body {
+          font-family: "Comic Sans MS", sans-serif;
+        }
         table, th, tr, td {
           border: solid 1px grey;
           padding: .3rem;
-          font-family: "Comic Sans MS", sans-serif;
         }
       </style>
+      <h1>Current Status: ${instance.currentOutageId ?
+        "<span style='color:red'>Offline</span>" :
+        "<span style='color:green'>Online</span>"}</h1>
+      <h1>Outages</h1>
       <table>
         <thead>
           <tr>
