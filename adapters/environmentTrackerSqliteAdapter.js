@@ -45,8 +45,7 @@ const loadOutages = (db, instance) => {
   SELECT *
   FROM Outages
   WHERE environment = '${instance.name}'
-  ORDER BY outageBegan DESC
-  LIMIT 10`, (err, rows) => {
+  ORDER BY outageBegan DESC`, (err, rows) => {
     if (err) { console.log(err); return; };
     rows.forEach(row => instance.outages.unshift(outageFromDbRow(row)));
 

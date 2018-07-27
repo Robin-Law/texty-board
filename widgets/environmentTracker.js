@@ -114,7 +114,52 @@ const updateOutageView = (instance) => {
   instance.screen.render();
 }
 
-const environmentTrackerFactory = (axios, screen, db, name, url, viewWidthPercent, viewHeightPercent) => {
+const getOutageRowHtml = outage => `
+  <tr>
+    <td>${outage.id}</td>
+    <td>${outage.environment}</td>
+    <td>${outage.outageBegan.format("lll")}</td>
+    <td>${outage.outageEnded ? outage.outageEnded.format("lll") : ''}</td>
+    <td>${outage.reason}</td>
+  </tr>
+`;
+
+const registerEndpoints = (expressInstance, instance) => {
+  // TODO: Uhhh... this didn't work out how I initially planned. Rethink this...
+  expressInstance.get(`/outages/${instance.name}`, (req, res) => {
+    res.send(instance.outages);
+  });
+  expressInstance.get(`/outages/${instance.name}/table`, (req, res) => {
+    // TODO: Hahahaha, this is such shit. Let's wire up a real view engine...
+    res.type('text/html').send(
+      `<html><body>
+      <style type="text/css">
+        table, th, tr, td {
+          border: solid 1px grey;
+          padding: .3rem;
+          font-family: "Comic Sans MS", sans-serif;
+        }
+      </style>
+      <table>
+        <thead>
+          <tr>
+            <th>Outage ID</th>
+            <th>Environment</th>
+            <th>Outage Began</th>
+            <th>Outage Ended</th>
+            <th>Error Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${[...instance.outages].reverse().map(getOutageRowHtml).join('\n')}
+        </tbody>
+      </table>
+      </body></html>`
+    );
+  });
+};
+
+const environmentTrackerFactory = (axios, screen, db, expressInstance, name, url, viewWidthPercent, viewHeightPercent) => {
   const sqlAdapter = adapterFactory(db);
   sqlAdapter.createTable();
   const currentStatusViewWeight = .67;
@@ -135,6 +180,8 @@ const environmentTrackerFactory = (axios, screen, db, name, url, viewWidthPercen
 
   // TODO: Race condition: If the first state check returns before the outages load, the currentOutage will fall out of sync
   sqlAdapter.loadOutages(instance);
+
+  registerEndpoints(expressInstance, instance);
 
   const views = [ instance.currentStatusView, instance.outagesView ];
 
