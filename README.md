@@ -21,7 +21,7 @@
 
 ## Accessing the web interface
 ### Environment Tracker
-Access `host:3456/outages/EnvironmentName` for JSON and `host:3456/outages/EnvironmentName/table` for delicious HTML.
+Access `http://host:3456/outages/EnvironmentName` for JSON and `http://host:3456/outages/EnvironmentName/table` for delicious HTML.
 
 ## Windows Support
 You will need to run this in a WSL (Windows Subsystem For Linux) shell or similar, since [blessed](https://github.com/chjj/blessed) does not work well in Windows-based shells.
