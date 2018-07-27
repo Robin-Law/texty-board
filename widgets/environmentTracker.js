@@ -3,7 +3,7 @@ const figlet = require('figlet');
 const moment = require('moment');
 const uuid = require("uuid").v4;
 
-const sqliteDateTimeFormat = 'yyyy-MM-dd HH:mm:ss';
+const sqliteDateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
 const createTable = (db) => db.run(
   `CREATE TABLE IF NOT EXISTS Outages 
   (
@@ -19,12 +19,11 @@ const persistOutage = (db, outage) => {
   db.run(
     `INSERT INTO Outages (id, environment, outageBegan, reason)
      VALUES (
-       '${outage.id}',
-       '${outage.environment}',
-       '${outage.format(sqliteDateTimeFormat)}',
-       '${outage.reason}'
-      )`
-  );
+      '${outage.id}',
+      '${outage.environment}',
+      '${outage.outageBegan.format(sqliteDateTimeFormat)}',
+      '${outage.reason}'
+   )`);
 };
 
 const persistResolveOutage = (db, outage) => {
@@ -33,6 +32,31 @@ const persistResolveOutage = (db, outage) => {
      SET outageEnded='${outage.outageEnded.format(sqliteDateTimeFormat)}'
      WHERE id='${outage.id}'`
   );
+};
+
+const outageFromDbRow = (outageRow) => ({
+  id: outageRow.id,
+  environment: outageRow.environment,
+  outageBegan: moment(outageRow.outageBegan),
+  outageEnded: outageRow.outageEnded ? moment(outageRow.outageEnded) : undefined,
+  reason: outageRow.reason
+});
+
+const loadOutages = (instance) => {
+  instance.db.all(`
+  SELECT *
+  FROM Outages
+  WHERE environment = '${instance.name}'
+  ORDER BY outageBegan DESC
+  LIMIT 10`, (err, rows) => {
+    if (err) { console.log(err); return; };
+    rows.forEach(row => instance.outages.unshift(outageFromDbRow(row)));
+
+    // TODO: Race condition: If the first state check returns before the outages load, the currentOutage will fall out of sync
+    if (rows[0] && !rows[0].outageEnded && !instance.currentOutage) {
+      instance.currentOutageId = rows[0].id;
+    }
+  });
 }
 
 const goodColor = 'green';
@@ -79,10 +103,12 @@ const createOutagesView = (dimensionsObject, name) => blessed.text({
 const createOutage = (instance, reason) => {
   const newOutage = {
     id: uuid(),
+    environment: instance.name,
     outageBegan: moment(),
     reason
   }
   instance.currentOutageId = newOutage.id;
+  persistOutage(instance.db, newOutage);
   instance.outages.push(newOutage);
 };
 
@@ -159,6 +185,9 @@ const environmentTrackerFactory = (axios, screen, db, name, url, viewWidthPercen
     currentStatusView: createCurrentStatusView(currentStatusViewDimensions, name),
     outagesView: createOutagesView(outagesViewDimensions, name)
   };
+
+  // TODO: Race condition: If the first state check returns before the outages load, the currentOutage will fall out of sync
+  loadOutages(instance);
 
   const views = [ instance.currentStatusView, instance.outagesView ];
 
