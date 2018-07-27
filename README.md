@@ -18,6 +18,10 @@
   ```
 4. `npm start`
 
+## Accessing the web interface
+### Environment Tracker
+Access `/outages/EnvironmentName` for JSON and `/outages/EnvironmentName/table` for delicious HTML
+
 ## Windows Support
 You will need to run this in a WSL (Windows Subsystem For Linux) shell or similar, since [blessed](https://github.com/chjj/blessed) does not work well in Windows-based shells.
 
