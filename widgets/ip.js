@@ -4,9 +4,9 @@ const ip = require("ip").address();
 const state = {};
 
 const ipBox = blessed.text({
-  width: '90%',
+  width: '100%',
   label: "texty-board",
-  content: ip,
+  content: `${ip}\n\n`, // lazily line everything up
   border: {
     type: 'line'
   },

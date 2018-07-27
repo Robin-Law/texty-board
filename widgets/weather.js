@@ -33,14 +33,10 @@ const figletStyleConditions = {
 };
 
 const state = {};
-
-const toCelsius = (degreesKelvin) => 0;
-const toFahrenheit = (degreesCelsius) => 0;
-
 const label = `${location.replace(',', ', ')} weather`;
 
 const weatherBox = blessed.text({
-  width: '90%',
+  width: '100%',
   label: label,
   content: "Loading Weather...",
   border: {
@@ -52,7 +48,8 @@ const updateWeather = async () => {
   try {
     var weatherResponse = (await axios.get(`http://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${owmApiKey}&units=${unit}`)).data;
     var temp = weatherResponse.main.temp;
-    var conditions = weatherResponse.weather[0].main;
+    var conditions = weatherResponse.weather[0].main;    
+    weatherBox.setLabel(`${label}`);
     weatherBox.setContent(
       `${figlet.textSync(`${Math.floor(temp)}${degreeSymbols[unit]}`, figletStyleDegrees)}\n${figlet.textSync(conditions, figletStyleConditions)}`);
   }

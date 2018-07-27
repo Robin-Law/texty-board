@@ -28,13 +28,13 @@ layout.append(environmentTrackerEast.view);
 const trimetArrivals = require("./widgets/trimetArrivals")(screen);
 layout.append(trimetArrivals.view);
 
+const hackerNews = require("./widgets/hackerNews")(screen, "25%", "50%");
+layout.append(hackerNews.view);
+
 const smallWidgets = blessed.layout({
   parent: layout,
   width: '25%',
   height: '50%',
-  border: {
-    type: 'line'
-  },
 });
 
 const weather = require("./widgets/weather")(screen);
@@ -52,18 +52,21 @@ environmentTrackerWest.updateAction();
 environmentTrackerEast.updateAction();
 trimetArrivals.updateAction();
 weather.updateAction();
+hackerNews.updateAction();
 
 setInterval(environmentTrackerWest.updateAction, 300000);
 setInterval(environmentTrackerEast.updateAction, 300000);
 setInterval(trimetArrivals.updateAction, 60000);
 setInterval(clock.updateAction, 5000);
 setInterval(weather.updateAction, 60000);
+setInterval(hackerNews.updateAction, 3600000);
 
 screen.key(['enter'], function(ch, key) {
   environmentTrackerWest.updateAction();
   environmentTrackerEast.updateAction();
   trimetArrivals.updateAction();
   weather.updateAction();
+  hackerNews.updateAction();
 });
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
