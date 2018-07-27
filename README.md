@@ -28,6 +28,6 @@ You will need to run this in a WSL (Windows Subsystem For Linux) shell or simila
 
 ## Features TODO
 
-* Persistence
-* Less rigid/more configurable structure
+* Refactoring
 * Serve views over Telnet
+* Hacker News Widget
