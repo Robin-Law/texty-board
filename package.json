@@ -14,9 +14,11 @@
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.8.5",
     "dotenv": "^5.0.1",
+    "express": "^4.16.3",
     "figlet": "^1.2.0",
     "ip": "^1.1.5",
     "moment": "^2.22.2",
+    "sqlite3": "^4.0.1",
     "uuid": "^3.2.1"
   }
 }

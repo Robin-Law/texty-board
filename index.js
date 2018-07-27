@@ -3,8 +3,12 @@ const blessed = require('blessed');
 const axios = require('axios').create({
   timeout: 10000,
 });
+const sqlite = require("sqlite3");
+const db = new sqlite.Database("./texty-board.db", console.log);
 
-// Create a screen object.
+const express = require('express')();
+const expressPort = process.env.EXPRESS_PORT || 3456;
+
 const screen = blessed.screen({
   smartCSR: true,
 });
@@ -15,9 +19,9 @@ const layout = blessed.layout({
 });
 
 const environmentTrackerWest =
-  require("./widgets/environmentTracker")(axios, screen, process.env.ENV_ONE_NAME, process.env.ENV_ONE_STATUS_URL, 50, 50);
+  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_ONE_NAME, process.env.ENV_ONE_STATUS_URL, 50, 50);
 const environmentTrackerEast =
-  require("./widgets/environmentTracker")(axios, screen, process.env.ENV_TWO_NAME, process.env.ENV_TWO_STATUS_URL, 50, 50);
+  require("./widgets/environmentTracker")(axios, screen, db, express, process.env.ENV_TWO_NAME, process.env.ENV_TWO_STATUS_URL, 50, 50);
 environmentTrackerWest.views.forEach(view => layout.append(view));
 environmentTrackerEast.views.forEach(view => layout.append(view));
 
@@ -42,7 +46,6 @@ smallWidgets.append(ip.view);
 
 layout.append(smallWidgets);
 
-
 screen.render();
 
 environmentTrackerWest.updateAction();
@@ -64,5 +67,8 @@ screen.key(['enter'], function(ch, key) {
 });
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
+  db.close();
   return process.exit(0);
 });
+
+express.listen(expressPort);

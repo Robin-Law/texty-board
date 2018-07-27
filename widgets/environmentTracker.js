@@ -2,6 +2,7 @@ const blessed = require('blessed');
 const figlet = require('figlet');
 const moment = require('moment');
 const uuid = require("uuid").v4;
+const adapterFactory = require("../adapters/environmentTrackerSqliteAdapter");
 
 const goodColor = 'green';
 const maybeColor = 'grey';
@@ -45,19 +46,23 @@ const createOutagesView = (dimensionsObject, name) => blessed.text({
 });
 
 const createOutage = (instance, reason) => {
-  const outageId = uuid();
-  instance.currentOutageId = outageId;
-  instance.outages.push({
-    id: outageId,
+  const newOutage = {
+    id: uuid(),
+    environment: instance.name,
     outageBegan: moment(),
     reason
-  });
+  }
+  instance.currentOutageId = newOutage.id;
+  instance.sqlAdapter.persistOutage(newOutage);
+  instance.outages.push(newOutage);
 };
 
 const getCurrentOutage = (instance) => instance.outages.find(outage => outage.id === instance.currentOutageId);
 
 const markOutageResolved = (instance) => {
-  getCurrentOutage(instance).outageEnded = moment();
+  const currentOutage = getCurrentOutage(instance)
+  currentOutage.outageEnded = moment();
+  instance.sqlAdapter.persistResolveOutage(currentOutage);
   delete instance.currentOutageId;
 }
 
@@ -109,20 +114,80 @@ const updateOutageView = (instance) => {
   instance.screen.render();
 }
 
-const environmentTrackerFactory = (axios, screen, name, url, viewWidthPercent, viewHeightPercent) => {
+const getOutageRowHtml = outage => `
+  <tr>
+    <td>${outage.id}</td>
+    <td>${outage.environment}</td>
+    <td>${outage.outageBegan.format("lll")}</td>
+    <td>${outage.outageEnded ? outage.outageEnded.format("lll") : ''}</td>
+    <td>${outage.reason}</td>
+  </tr>
+`;
+
+const registerEndpoints = (expressInstance, instance) => {
+  // TODO: Uhhh... this didn't work out how I initially planned. Rethink this...
+  expressInstance.get(`/outages/${instance.name}`, (req, res) => {
+    res.send(instance.outages);
+  });
+  expressInstance.get(`/outages/${instance.name}/table`, (req, res) => {
+    // TODO: Hahahaha, this is such shit. Let's wire up a real view engine...
+    res.type('text/html').send(
+      `<html><body>
+      <style type="text/css">
+        body {
+          font-family: "Comic Sans MS", sans-serif;
+        }
+        table, th, tr, td {
+          border: solid 1px grey;
+          padding: .3rem;
+        }
+      </style>
+      <h1>Current Status: ${instance.currentOutageId ?
+        "<span style='color:red'>Offline</span>" :
+        "<span style='color:green'>Online</span>"}</h1>
+      <h1>Outages</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Outage ID</th>
+            <th>Environment</th>
+            <th>Outage Began</th>
+            <th>Outage Ended</th>
+            <th>Error Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${[...instance.outages].reverse().map(getOutageRowHtml).join('\n')}
+        </tbody>
+      </table>
+      </body></html>`
+    );
+  });
+};
+
+const environmentTrackerFactory = (axios, screen, db, expressInstance, name, url, viewWidthPercent, viewHeightPercent) => {
+  const sqlAdapter = adapterFactory(db);
+  sqlAdapter.createTable();
   const currentStatusViewWeight = .67;
   const currentStatusViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, currentStatusViewWeight);
   const outagesViewDimensions = calculateDimensions(viewWidthPercent, viewHeightPercent, 1 - currentStatusViewWeight);
   const instance = {
     axios: axios,
     screen,
+    db,
     name,
     url,
     outages: [],
     banner: figlet.textSync(name, figletStyleBanner),
     currentStatusView: createCurrentStatusView(currentStatusViewDimensions, name),
-    outagesView: createOutagesView(outagesViewDimensions, name)
+    outagesView: createOutagesView(outagesViewDimensions, name),
+    sqlAdapter: sqlAdapter
   };
+
+  // TODO: Race condition: If the first state check returns before the outages load, the currentOutage will fall out of sync
+  sqlAdapter.loadOutages(instance);
+
+  registerEndpoints(expressInstance, instance);
 
   const views = [ instance.currentStatusView, instance.outagesView ];
 
