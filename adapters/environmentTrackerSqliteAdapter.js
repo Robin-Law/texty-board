@@ -46,7 +46,7 @@ const loadOutages = (db, instance) => {
   FROM Outages
   WHERE environment = '${instance.name}'
   ORDER BY outageBegan DESC`, (err, rows) => {
-    if (err) { console.log(err); return; };
+    if (err) { console.log('LoadOutages Error: ', err); return; };
     rows.forEach(row => instance.outages.unshift(outageFromDbRow(row)));
 
     // TODO: Race condition: If the first state check returns before the outages load, the currentOutage will fall out of sync

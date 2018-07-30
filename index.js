@@ -4,7 +4,7 @@ const axios = require('axios').create({
   timeout: 10000,
 });
 const sqlite = require("sqlite3");
-const db = new sqlite.Database("./texty-board.db", console.log);
+const db = new sqlite.Database("./texty-board.db", (err) => console.log('sqlite3 init error: ', err));
 
 const express = require('express')();
 const expressPort = process.env.EXPRESS_PORT || 3456;
